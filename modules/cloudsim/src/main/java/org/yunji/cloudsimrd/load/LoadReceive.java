@@ -11,7 +11,7 @@ import java.util.*;
  * @author weirenjie
  * @date 2019/10/14
  */
-public class LoadBalance {
+public class LoadReceive {
     public static int CLOUDLET = 1;
     public static int VM = 2;
     public static int CONTAINER = 3;
