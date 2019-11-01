@@ -21,7 +21,7 @@ public class UtilizationModelPlanetLabInMemory implements UtilizationModel {
 
 	/**
 	 * Instantiates a new PlanetLab resource utilization model from a trace file.
-	 *
+	 * 从跟踪文件实例化新的PlanetLab资源利用模型。
 	 * @param inputPath The path of a PlanetLab datacenter trace.
          * @param schedulingInterval
 	 * @throws NumberFormatException the number format exception
@@ -44,6 +44,7 @@ public class UtilizationModelPlanetLabInMemory implements UtilizationModel {
 	/**
 	 * Instantiates a new PlanetLab resource utilization model with variable data samples
          * from a trace file.
+	 * 使用跟踪文件中的变量数据示例实例化新的PlanetLab资源利用模型
 	 *
 	 * @param inputPath The path of a PlanetLab datacenter trace.
 	 * @param dataSamples number of samples in the file

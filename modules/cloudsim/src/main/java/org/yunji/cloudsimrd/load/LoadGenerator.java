@@ -2,12 +2,17 @@ package org.yunji.cloudsimrd.load;
 
 import org.cloudbus.cloudsim.Cloudlet;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.UtilizationModelFull;
+import org.cloudbus.cloudsim.UtilizationModelNull;
+import org.cloudbus.cloudsim.container.core.ContainerCloudlet;
+import org.cloudbus.cloudsim.container.utils.IDs;
 import org.cloudbus.cloudsim.util.WorkloadFileReader;
+import org.yunji.cloudsimrd.Constants;
 import org.yunji.cloudsimrd.load.ConcurrencyLoads;
 import org.yunji.cloudsimrd.load.Load;
 
@@ -26,6 +31,7 @@ public class LoadGenerator {
 
     /**
      * 从文件中读取任务
+     *
      * @param fileName
      * @return
      */
@@ -49,6 +55,7 @@ public class LoadGenerator {
 
     /**
      * 根据默认参数生成Load
+     *
      * @param brokerId
      * @param vmid
      * @return
@@ -75,7 +82,8 @@ public class LoadGenerator {
 
     /**
      * 生成并发任务
-     * @param loads 普通任务
+     *
+     * @param loads             普通任务
      * @param concurrencyNumber 并发数
      * @return
      */
@@ -88,5 +96,90 @@ public class LoadGenerator {
         return concurrencyLoads;
     }
 
+    /**
+     * Creating the cloudlet list that are going to run on containers
+     *
+     * @param brokerId
+     * @param numberOfCloudlets
+     * @return
+     * @throws FileNotFoundException
+     */
+    public static List<ContainerCloudlet> createContainerCloudletList(int brokerId, int numberOfCloudlets)
+            throws FileNotFoundException {
+        String inputFolderName = LoadGenerator.class.getClassLoader().getResource("workload/planetlab").getPath();
+        ArrayList<ContainerCloudlet> cloudletList = new ArrayList<ContainerCloudlet>();
+        long fileSize = 300L;
+        long outputSize = 300L;
+        UtilizationModelNull utilizationModelNull = new UtilizationModelNull();
+        java.io.File inputFolder1 = new java.io.File(inputFolderName);
+        java.io.File[] files1 = inputFolder1.listFiles();
+        int createdCloudlets = 0;
+        for (java.io.File aFiles1 : files1) {
+            java.io.File inputFolder = new java.io.File(aFiles1.toString());
+            java.io.File[] files = inputFolder.listFiles();
+            for (int i = 0; i < files.length; ++i) {
+                if (createdCloudlets < numberOfCloudlets) {
+                    ContainerCloudlet cloudlet = null;
+
+                    try {
+                        cloudlet = new ContainerCloudlet(IDs.pollId(ContainerCloudlet.class), Constants.CLOUDLET_LENGTH, 1,
+                                fileSize, outputSize,
+                                new UtilizationModelPlanetLabInMemoryExtended(files[i].getAbsolutePath(), 300.0D),
+                                utilizationModelNull, utilizationModelNull);
+                    } catch (Exception var13) {
+                        var13.printStackTrace();
+                        System.exit(0);
+                    }
+
+                    cloudlet.setUserId(brokerId);
+                    cloudletList.add(cloudlet);
+                    createdCloudlets += 1;
+                } else {
+
+                    return cloudletList;
+                }
+            }
+
+        }
+        return cloudletList;
+    }
+
+    public static List<Load> createLoadList(int brokeId, List<String> Urls, UtilizationModel utilizationModelRam, UtilizationModel utilizationModelBw) throws FileNotFoundException {
+
+        long fileSize = 300L;
+        long outputSize = 300L;
+        String inputFolderName = LoadGenerator.class.getClassLoader().getResource("workload/planetlab").getPath();
+        ArrayList<Load> loadList = new ArrayList<Load>();
+        java.io.File inputFolder1 = new java.io.File(inputFolderName);
+        java.io.File[] files1 = inputFolder1.listFiles();
+        int createdCloudlets = 0;
+
+        for (java.io.File aFiles1 : files1) {
+            java.io.File inputFolder = new java.io.File(aFiles1.toString());
+            java.io.File[] files = inputFolder.listFiles();
+            for (int i = 0; i < files.length; ++i) {
+                if (createdCloudlets < Urls.size()) {
+                    ContainerCloudlet cloudlet = null;
+                    try {
+                        cloudlet = new ContainerCloudlet(IDs.pollId(ContainerCloudlet.class), Constants.CLOUDLET_LENGTH, 1,
+                                fileSize, outputSize,
+                                new UtilizationModelPlanetLabInMemoryExtended(files[i].getAbsolutePath(), 300.0D),
+                                utilizationModelRam, utilizationModelBw);
+                    } catch (Exception var13) {
+                        var13.printStackTrace();
+                        System.exit(0);
+                    }
+
+                    cloudlet.setUserId(brokeId);
+                    Load load = new Load(cloudlet, Urls.get(i));
+                    loadList.add(load);
+                    createdCloudlets += 1;
+                } else {
+                    return loadList;
+                }
+            }
+        }
+        return loadList;
+    }
 
 }

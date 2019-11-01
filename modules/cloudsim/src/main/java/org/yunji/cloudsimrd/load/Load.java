@@ -37,6 +37,31 @@ public class Load {
      */
     public int responseTime = 1000;
 
+    /**
+     * 平均响应时间
+     */
+    public int averageResponseTime;
+
+    /**
+     * Calls per second
+     */
+    public int qpt;
+
+    /**
+     * 错误率
+     */
+    public int errorRate;
+
+    /**
+     * 中值响应时间
+     */
+    public int medianTime;
+
+    /**
+     * 加载时间
+     */
+    public int loadDuration;
+
     public Load(Cloudlet cloudlet, String targetURL) {
         this.singleTask = cloudlet;
         this.targetURL = targetURL;
@@ -81,5 +106,45 @@ public class Load {
 
     public void setCreatedTime(double createdTime) {
         this.createdTime = createdTime;
+    }
+
+    public int getAverageResponseTime() {
+        return averageResponseTime;
+    }
+
+    public void setAverageResponseTime(int averageResponseTime) {
+        this.averageResponseTime = averageResponseTime;
+    }
+
+    public int getQpt() {
+        return qpt;
+    }
+
+    public void setQpt(int qpt) {
+        this.qpt = qpt;
+    }
+
+    public int getErrorRate() {
+        return errorRate;
+    }
+
+    public void setErrorRate(int errorRate) {
+        this.errorRate = errorRate;
+    }
+
+    public int getMedianTime() {
+        return medianTime;
+    }
+
+    public void setMedianTime(int medianTime) {
+        this.medianTime = medianTime;
+    }
+
+    public int getLoadDuration() {
+        return loadDuration;
+    }
+
+    public void setLoadDuration(int loadDuration) {
+        this.loadDuration = loadDuration;
     }
 }

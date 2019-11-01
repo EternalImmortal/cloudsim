@@ -11,7 +11,8 @@ package org.cloudbus.cloudsim;
 /**
  * The UtilizationModelFull class is a simple model, according to which a Cloudlet always utilizes
  * a given allocated resource at 100%, all the time.
- * 
+ * UtilizationModelFull类是一个简单的模型，根据该模型，Cloudlet始终以100%的速率使用给定的分配资源。
+ *
  * @author Anton Beloglazov
  * @since CloudSim Toolkit 2.0
  */
@@ -23,6 +24,7 @@ public class UtilizationModelFull implements UtilizationModel {
          * to the cloudlet.
          * @param time the time to get the resource usage, that isn't considered
          * for this UtilizationModel.
+	 * 获取给定资源相对于分配给cloudlet的资源总容量的利用率百分比@param time获取资源使用情况的时间，此利用率模型不考虑此时间。
 	 * @return Always return 1 (100% of utilization), independent of the time.
 	 */
 	@Override
