@@ -20,4 +20,8 @@ public class Constants {
     public static final int CLOUDLET_PES = 1;
 
     public final static double SIMULATION_LIMIT = 24 * 60 * 60;
+
+    public static final int INTERVAL = 1000;
+
+    public static final String PROJECT_PATH = "/Users/WeiJoseph/Documents/GitHub/cloudsim/modules/cloudsim/src/main/java/org/yunji/cloudsimrd/";
 }
