@@ -2,12 +2,9 @@ package org.yunji.cloudsimrd.load;
 
 import org.cloudbus.cloudsim.Cloudlet;
 
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.UtilizationModelFull;
@@ -17,8 +14,7 @@ import org.cloudbus.cloudsim.container.utils.IDs;
 import org.cloudbus.cloudsim.util.WorkloadFileReader;
 import org.yunji.cloudsimrd.Constants;
 import org.yunji.cloudsimrd.PropertiesUtil;
-
-import java.util.Date;
+import sun.plugin2.gluegen.runtime.CPU;
 
 
 /**
@@ -31,21 +27,7 @@ import java.util.Date;
  * 负载生成器，仿真负载。
  */
 public class LoadGenerator {
-    PropertiesUtil propertiesUtil = new PropertiesUtil();
-    Map<String, String> propertiesMap = propertiesUtil.loadProperties();
-
-
-    private double ramp_up = Double.valueOf(propertiesMap.get("ramp_up"));
-    private double ramp_down = Double.valueOf(propertiesMap.get("ramp_down"));
-    private int totalNumberOfRequest = Integer.valueOf(propertiesMap.get("loadNumbers"));
-    private int maxConcurrent = Integer.valueOf(propertiesMap.get("concurrent"));
-    private int interval = Integer.valueOf(propertiesMap.get("request_interval"));
-
-    private int qps = Integer.valueOf(propertiesMap.get("qps"));
-    private double load_duration = Double.valueOf(propertiesMap.get("load_duration"));
-    private double average_response_time = Double.valueOf(propertiesMap.get("average_response_time"));
-    private double median_response_time = Double.valueOf(propertiesMap.get("median_response_time"));
-    private double p95_response_time = Double.valueOf(propertiesMap.get("p95_response_time"));
+    private String propertiesPath = "/Users/WeiJoseph/Documents/GitHub/cloudsim/modules/cloudsim/src/main/java/org/yunji/cloudsimrd/load.properties";
 
     private int brokeId = 1;
     private int vmId = 0;
@@ -54,31 +36,66 @@ public class LoadGenerator {
 
     private String defaultUrl = "www.baidu.com";
 
-
-
     /**
-     * 从文件中读取任务
-     *
-     * @param fileName
+     * 读取trace文件中的数据，生成List
+     * @param inputPath
+     * @param size
      * @return
      */
-    public List<Load> generateLoadsFromFile(String fileName) {
-        List<Load> loads = new ArrayList<>();
+    public List<Integer> readListFromFile(String inputPath, Integer size) {
+        List<Integer> resultList = new ArrayList<>();
+
         try {
-            WorkloadFileReader workloadFileReader = new WorkloadFileReader(fileName, this.rating);
-            ArrayList<Cloudlet> cloudlets = workloadFileReader.generateWorkload();
-
-
-            for (Cloudlet cloudlet : cloudlets) {
-                Load load = new Load(cloudlet, defaultUrl);
-                loads.add(load);
+            BufferedReader input = new BufferedReader(new FileReader(inputPath));
+            for (int i = 0; i < size - 1; i++) {
+                resultList.add(Integer.valueOf(input.readLine()));
             }
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
-        } finally {
-            return loads;
         }
+        return resultList;
     }
+
+    /**
+     * 根据List每秒生成不同数量的任务
+     * @param numList 不同时间生成任务数量的list
+     * @return
+     */
+    public List<Cloudlet> generateCloudletsFromList(List<Integer> numList) {
+        List<Cloudlet> resultList = new ArrayList<>();
+        for (Integer num : numList) {
+            resultList.addAll(generateCloudlets(num));
+        }
+        return resultList;
+    }
+
+    /**
+     * 生成一定数量的cloudlet
+     *
+     * @param number
+     * @return
+     */
+    public List<Cloudlet> generateCloudlets(Integer number) {
+        long length = 400000;
+        long fileSize = 300;
+        long outputSize = 300;
+        // number of cpus
+        int pesNumber = 1;
+        UtilizationModel utilizationModel = new UtilizationModelFull();
+        List<Cloudlet> cloudlets = new ArrayList<>();
+        for (Integer i = 0; i < number; i++) {
+            Cloudlet cloudlet =
+                    new Cloudlet(i, length, pesNumber, fileSize,
+                            outputSize, utilizationModel, utilizationModel,
+                            utilizationModel);
+            cloudlet.setUserId(brokeId);
+            cloudlet.setVmId(vmId);
+            cloudlets.add(cloudlet);
+        }
+        return cloudlets;
+    }
+
 
     /**
      * 根据默认参数生成Load
@@ -87,7 +104,7 @@ public class LoadGenerator {
      * @param vmid
      * @return
      */
-    public Load generateLoad(int brokerId, int vmid) {
+    public Load generateSingleLoad(int brokerId, int vmid) {
         int id = 0;
         long length = 400000;
         long fileSize = 300;
@@ -110,66 +127,65 @@ public class LoadGenerator {
     /**
      * 生成并发任务
      *
-     * @param loads             普通任务
      * @param concurrencyNumber 并发数
      * @return
      */
-    public ConcurrencyLoads getConcurrencyLoads(List<Load> loads, Integer concurrencyNumber) {
+    public ConcurrencyLoads generateConcurrentLoad(Integer cloudletNumbers, Integer concurrencyNumber) {
 
         if (null == concurrencyNumber) {
             concurrencyNumber = 1;
         }
-        ConcurrencyLoads concurrencyLoads = new ConcurrencyLoads(loads, concurrencyNumber);
+        ConcurrencyLoads concurrencyLoads = new ConcurrencyLoads(generateCloudlets(cloudletNumbers), concurrencyNumber);
         return concurrencyLoads;
     }
 
-    /**
-     * Creating the cloudlet list that are going to run on containers
-     *
-     * @param brokerId
-     * @param numberOfCloudlets
-     * @return
-     * @throws FileNotFoundException
-     */
-    public static List<ContainerCloudlet> createContainerCloudletList(int brokerId, int numberOfCloudlets)
-            throws FileNotFoundException {
-        String inputFolderName = LoadGenerator.class.getClassLoader().getResource("workload/planetlab").getPath();
-        ArrayList<ContainerCloudlet> cloudletList = new ArrayList<ContainerCloudlet>();
-        long fileSize = 300L;
-        long outputSize = 300L;
-        UtilizationModelNull utilizationModelNull = new UtilizationModelNull();
-        java.io.File inputFolder1 = new java.io.File(inputFolderName);
-        java.io.File[] files1 = inputFolder1.listFiles();
-        int createdCloudlets = 0;
-        for (java.io.File aFiles1 : files1) {
-            java.io.File inputFolder = new java.io.File(aFiles1.toString());
-            java.io.File[] files = inputFolder.listFiles();
-            for (int i = 0; i < files.length; ++i) {
-                if (createdCloudlets < numberOfCloudlets) {
-                    ContainerCloudlet cloudlet = null;
-
-                    try {
-                        cloudlet = new ContainerCloudlet(IDs.pollId(ContainerCloudlet.class), Constants.CLOUDLET_LENGTH, 1,
-                                fileSize, outputSize,
-                                new UtilizationModelPlanetLabInMemoryExtended(files[i].getAbsolutePath(), 300.0D),
-                                utilizationModelNull, utilizationModelNull);
-                    } catch (Exception var13) {
-                        var13.printStackTrace();
-                        System.exit(0);
-                    }
-
-                    cloudlet.setUserId(brokerId);
-                    cloudletList.add(cloudlet);
-                    createdCloudlets += 1;
-                } else {
-
-                    return cloudletList;
-                }
-            }
-
-        }
-        return cloudletList;
-    }
+    // /**
+    //  * Creating the cloudlet list that are going to run on containers
+    //  *
+    //  * @param brokerId
+    //  * @param numberOfCloudlets
+    //  * @return
+    //  * @throws FileNotFoundException
+    //  */
+    // public static List<ContainerCloudlet> createContainerCloudletList(int brokerId, int numberOfCloudlets)
+    //         throws FileNotFoundException {
+    //     String inputFolderName = LoadGenerator.class.getClassLoader().getResource("workload/planetlab").getPath();
+    //     ArrayList<ContainerCloudlet> cloudletList = new ArrayList<ContainerCloudlet>();
+    //     long fileSize = 300L;
+    //     long outputSize = 300L;
+    //     UtilizationModelNull utilizationModelNull = new UtilizationModelNull();
+    //     java.io.File inputFolder1 = new java.io.File(inputFolderName);
+    //     java.io.File[] files1 = inputFolder1.listFiles();
+    //     int createdCloudlets = 0;
+    //     for (java.io.File aFiles1 : files1) {
+    //         java.io.File inputFolder = new java.io.File(aFiles1.toString());
+    //         java.io.File[] files = inputFolder.listFiles();
+    //         for (int i = 0; i < files.length; ++i) {
+    //             if (createdCloudlets < numberOfCloudlets) {
+    //                 ContainerCloudlet cloudlet = null;
+    //
+    //                 try {
+    //                     cloudlet = new ContainerCloudlet(IDs.pollId(ContainerCloudlet.class), Constants.CLOUDLET_LENGTH, 1,
+    //                             fileSize, outputSize,
+    //                             new UtilizationModelPlanetLabInMemoryExtended(files[i].getAbsolutePath(), 300.0D),
+    //                             utilizationModelNull, utilizationModelNull);
+    //                 } catch (Exception var13) {
+    //                     var13.printStackTrace();
+    //                     System.exit(0);
+    //                 }
+    //
+    //                 cloudlet.setUserId(brokerId);
+    //                 cloudletList.add(cloudlet);
+    //                 createdCloudlets += 1;
+    //             } else {
+    //
+    //                 return cloudletList;
+    //             }
+    //         }
+    //
+    //     }
+    //     return cloudletList;
+    // }
 
     /**
      * 通过参数生成任务列表生成任务列表
@@ -221,10 +237,18 @@ public class LoadGenerator {
         return loadList;
     }
 
+    /**
+     * 获取当前时间
+     *
+     * @return
+     */
     public double currentTime() {
         return System.currentTimeMillis();
     }
 
+    /**
+     * 打印时间
+     */
     public void printSimpleTime() {
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
@@ -233,6 +257,11 @@ public class LoadGenerator {
         System.out.println("现在时间：" + simpleDateFormat.format(date));
     }
 
+    /**
+     * 打印日期的时间
+     *
+     * @param date
+     */
     public void convertToSimpleTime(double date) {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat();
         simpleDateFormat.applyPattern("yyyy-MM-dd HH:mm:ss a");
@@ -240,7 +269,87 @@ public class LoadGenerator {
         System.out.println("现在时间：" + simpleDateFormat.format(date));
     }
 
-    public Map<Double, List<Load>> createLoadsWithTime(int brokeId, double ramp_up, double ramp_down, int total_number, int maxConcurrent, int interval, int vmId) {
+    /**
+     * 按照planetLab的格式保存每秒占有率和每秒任务数
+     *
+     * @param filePathOfNum
+     * @param filePathOfRate
+     * @param ramp_up
+     * @param ramp_down
+     * @param total_number
+     * @param maxConcurrent
+     */
+    public void saveLoadConfig(String filePathOfNum, String filePathOfRate, double ramp_up, double ramp_down, int total_number, int maxConcurrent, int CPUMax) {
+        List<Integer> numList = new ArrayList<>();
+        List<Integer> rateList = new ArrayList<>();
+
+        Integer up_acceleration = new Double(maxConcurrent / (ramp_up / 1000)).intValue();
+        Integer up_number = 0;
+
+
+        for (Integer speed = up_acceleration; speed <= maxConcurrent; speed += up_acceleration) {
+            numList.add(speed);
+            rateList.add(speed * 100 / CPUMax);
+            up_number = up_number + speed;
+        }
+
+        Integer down_acceleration = new Double(maxConcurrent / ramp_down * 1000).intValue();
+        Integer down_number = 0;
+        for (Integer speed = maxConcurrent; speed > 0; speed -= down_acceleration) {
+            down_number = down_number + speed;
+        }
+
+        for (Integer currentNum = up_number; currentNum < total_number - down_number; currentNum += maxConcurrent) {
+            numList.add(maxConcurrent);
+            rateList.add(maxConcurrent * 100 / CPUMax);
+        }
+
+        for (Integer speed = maxConcurrent; speed > 0; speed -= down_acceleration) {
+            numList.add(speed);
+            rateList.add(speed * 100 / CPUMax);
+            down_number = down_number + speed;
+        }
+
+        try {
+            // String currentPath = this.getClass().getResource("").getPath();
+            //
+            // filePathOfNum = new StringBuilder(currentPath).append(filePathOfNum).toString();
+            // filePathOfRate = new StringBuilder(currentPath).append(filePathOfRate).toString();
+
+            BufferedWriter bf1 = new BufferedWriter(new FileWriter(filePathOfNum + "," + numList.size()));
+            for (Integer i : numList) {
+                bf1.write(i.toString());
+                bf1.newLine();
+            }
+            bf1.close();
+            System.out.println("任务数量的trace保存");
+
+            BufferedWriter bf2 = new BufferedWriter(new FileWriter(filePathOfRate + "," + rateList.size()));
+            for (Integer i : rateList) {
+                bf2.write(i.toString());
+                bf2.newLine();
+            }
+            bf2.close();
+            System.out.println("CPU占用率的trace保存");
+        } catch (Exception e) {
+            System.out.println("写入异常");
+        }
+
+    }
+
+    /**
+     * 生成带有时间的普通任务
+     *
+     * @param brokeId
+     * @param vmId
+     * @param ramp_up
+     * @param ramp_down
+     * @param total_number
+     * @param maxConcurrent
+     * @param interval
+     * @return
+     */
+    public Map<Double, List<Load>> createLoadsWithTime(int brokeId, int vmId, double ramp_up, double ramp_down, int total_number, int maxConcurrent, int interval) {
         Map<Double, List<Load>> resultMap = new HashMap<>();
         int numOfCloudlet = 0;
 
@@ -278,7 +387,7 @@ public class LoadGenerator {
 
             List<Load> loads = new ArrayList<>();
             for (int i = 0; i < currentSpeed; i++) {
-                loads.add(generateLoad(brokeId, vmId));
+                loads.add(generateSingleLoad(brokeId, vmId));
             }
             resultMap.put(currentTime(), loads);
             numOfCloudlet = numOfCloudlet + currentSpeed;
@@ -296,7 +405,7 @@ public class LoadGenerator {
 
                 List<Load> loads = new ArrayList<>();
                 for (int i = 0; i < maxConcurrent; i++) {
-                    loads.add(generateLoad(brokeId, vmId));
+                    loads.add(generateSingleLoad(brokeId, vmId));
                 }
                 resultMap.put(currentTime(), loads);
                 numOfCloudlet = numOfCloudlet + maxConcurrent;
@@ -314,7 +423,7 @@ public class LoadGenerator {
 
             List<Load> loads = new ArrayList<>();
             for (int i = 0; i < currentSpeed; i++) {
-                loads.add(generateLoad(brokeId, vmId));
+                loads.add(generateSingleLoad(brokeId, vmId));
             }
             resultMap.put(currentTime(), loads);
             numOfCloudlet = numOfCloudlet + currentSpeed;
@@ -328,12 +437,109 @@ public class LoadGenerator {
         return resultMap;
     }
 
-    public List<Cloudlet> getCloudlistFromLoadList(List<Load> loads) {
-        List<Cloudlet> cloudlets = new ArrayList<>(loads.size());
-        for (Load load : loads) {
-            cloudlets.add(load.getSingleTask());
+    /**
+     * 生成带有时间的并发任务
+     *
+     * @param brokeId
+     * @param vmId
+     * @param ramp_up
+     * @param ramp_down
+     * @param total_number
+     * @param maxConcurrent
+     * @param interval
+     * @return
+     */
+    public Map<Double, ConcurrencyLoads> createConcurrentLoadsWithTime(int brokeId, int vmId, double ramp_up, double ramp_down, int total_number, int maxConcurrent, int interval) {
+        Map<Double, ConcurrencyLoads> resultMap = new HashMap<>();
+        int numOfCloudlet = 0;
+
+        Integer up_acceleration = new Double(maxConcurrent / (ramp_up / 1000)).intValue();
+        Integer up_number = 0;
+        for (Integer speed = up_acceleration; speed <= maxConcurrent; speed += up_acceleration) {
+            up_number = up_number + speed;
         }
-        return cloudlets;
+
+        Integer down_acceleration = new Double(maxConcurrent / ramp_down * 1000).intValue();
+        Integer down_number = 0;
+        for (Integer speed = maxConcurrent; speed > 0; speed -= down_acceleration) {
+            down_number = down_number + speed;
+        }
+
+        Integer stable_number = total_number - up_number - down_number;
+        Double stable_time = new Double(stable_number / (maxConcurrent / Constants.INTERVAL));
+
+        System.out.println("总时长：" + (ramp_up + stable_time + ramp_down) / 1000 + "s");
+        System.out.println("\n启动|持续时间：" + ramp_up / 1000 + "s");
+        System.out.println("启动|加速度：" + up_acceleration + "load/s^2");
+        System.out.println("启动|需要生成的任务数量：" + up_number);
+
+        System.out.println("\n稳定|持续时间：" + stable_time / 1000 + "s");
+        System.out.println("稳定|需要生成的任务总量：" + stable_number);
+
+        System.out.println("\n停止|持续时间：" + ramp_down / 1000 + "s");
+        System.out.println("停止|加速度：" + down_acceleration + "load/s^2");
+        System.out.println("停止|需要生成的任务数量：" + down_number + "\n");
+
+        Integer currentSpeed;
+        for (currentSpeed = up_acceleration; currentSpeed <= maxConcurrent; currentSpeed += up_acceleration) {
+
+            Double changeTime = currentTime();
+
+
+            resultMap.put(currentTime(), generateConcurrentLoad(currentSpeed, 1));
+            numOfCloudlet = numOfCloudlet + currentSpeed;
+
+            System.out.println("启动阶段，当前生成速度" + currentSpeed + "  当前已生成任务数量" + numOfCloudlet);
+
+            changeTime = changeTime + interval;
+            while (currentTime() < changeTime) {
+            }
+        }
+
+        if (stable_time > 0) {
+            do {
+                Double changeTime = currentTime();
+
+                resultMap.put(currentTime(), generateConcurrentLoad(maxConcurrent, 1));
+                numOfCloudlet = numOfCloudlet + maxConcurrent;
+
+                System.out.println("稳定阶段，当前生成速度" + maxConcurrent + "  当前已生成任务数量" + numOfCloudlet);
+
+                changeTime = changeTime + interval;
+                while (currentTime() < changeTime) {
+                }
+            } while (numOfCloudlet < up_number + stable_number);
+        }
+
+        for (currentSpeed = maxConcurrent; currentSpeed > 0; currentSpeed -= down_acceleration) {
+            Double changeTime = currentTime();
+
+            resultMap.put(currentTime(), generateConcurrentLoad(currentSpeed, 1));
+            numOfCloudlet = numOfCloudlet + currentSpeed;
+
+            System.out.println("终止阶段，当前生成任务速度" + currentSpeed + "  当前已生成任务数量" + numOfCloudlet);
+
+            changeTime = changeTime + interval;
+            while (currentTime() < changeTime) {
+            }
+        }
+        return resultMap;
+    }
+
+    /**
+     * 从时间和并发任务的Map中合并出Cloudlet的List
+     *
+     * @param map
+     * @return
+     */
+    public List<Cloudlet> getCloudletsFromTimeTable(Map<Double, ConcurrencyLoads> map) {
+        List<Cloudlet> resultList = new ArrayList<>();
+        Iterator<Map.Entry<Double, ConcurrencyLoads>> entryIterator = map.entrySet().iterator();
+        while (entryIterator.hasNext()) {
+            Map.Entry<Double, ConcurrencyLoads> entry = entryIterator.next();
+            resultList.addAll(entry.getValue().getCloudlets());
+        }
+        return resultList;
     }
 
 }

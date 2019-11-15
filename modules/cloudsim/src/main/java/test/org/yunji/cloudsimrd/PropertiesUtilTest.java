@@ -31,7 +31,14 @@ public class PropertiesUtilTest {
      */
     @Test
     public void testWritePropertiesDemo() throws Exception {
-
+        File directory = new File("");
+        try{
+            System.out.println(this.getClass().getResource("").getPath());
+            File f = new File(this.getClass().getResource("").getPath());
+            System.out.println(f);
+            System.out.println(directory.getCanonicalPath());
+            System.out.println(directory.getAbsolutePath());
+        }catch(Exception e){}
     }
 
 
@@ -48,7 +55,7 @@ public class PropertiesUtilTest {
      */
     @Test
     public void testLoadProperties() throws Exception {
-        System.out.println(propertiesUtil.loadProperties());
+        // System.out.println(propertiesUtil.loadProperties());
     }
 
 

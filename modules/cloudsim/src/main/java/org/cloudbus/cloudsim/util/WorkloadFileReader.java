@@ -209,7 +209,9 @@ public class WorkloadFileReader implements WorkloadModel {
                                     readFile(file);
                             }
                     } catch (final FileNotFoundException e) {
+                        System.out.println(e.getMessage());
                     } catch (final IOException e) {
+                        System.out.println(e.getMessage());
                     }
             }
 
